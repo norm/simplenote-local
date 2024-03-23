@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='simplenote_local',
-    version='0.1',
+    version='0.2',
     packages=find_packages(),
     entry_points={
         'console_scripts': [
@@ -12,5 +12,6 @@ setup(
     install_requires=[
         'simplenote',
         'toml',
+        'watchdog',
     ],
 )

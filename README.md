@@ -23,3 +23,14 @@ Notes are kept in `$HOME/Notes` by default, but this can be overridden.
 Send any local changes to Simplenote.
 
     simplenote --send
+
+Loop forever sending any local updates to Simplenote, and regularly checking
+Simplenote for updates to fetch.
+
+    simplenote --watch
+
+By default this will check Simplenote for new changes every 10 minutes, and
+wait one minute after detecting local changes before sending (in case the same
+file is changed again in quick succession). These timings can be overridden.
+
+    simplenote --fetch-interval 60 --send-wait 0 --watch

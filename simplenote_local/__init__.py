@@ -1,10 +1,12 @@
 from copy import deepcopy
+from datetime import datetime, timedelta
 import hashlib
 import os
 import pickle
 import re
 from simplenote import Simplenote
 import sys
+import time
 import toml
 
 from pprint import pprint
@@ -139,24 +141,90 @@ class SimplenoteLocal:
         self.save_data()
 
     def send_changes(self):
+        for note in self.list_changed_notes():
+            self.send_one_change(note)
+        self.fetch_changes()
+
+    def watch_for_changes(self, fetch_interval, send_wait):
+        import threading
+        from watchdog.observers import Observer
+        from watchdog.events import FileSystemEventHandler
+
+        class Changes(FileSystemEventHandler):
+            def __init__(self, local):
+                super().__init__()
+                self.local = local
+                self.lock = threading.Lock()
+                self.found = self.local.list_changed_notes()
+
+            def on_any_event(self, event):
+                filename = os.path.basename(event.src_path)
+                if filename.endswith('.txt') and not filename.startswith('.'):
+                    with self.lock:
+                        self.found = self.local.list_changed_notes()
+
+        changes = Changes(self)
+        observer = Observer()
+        observer.schedule(changes, path=self.directory, recursive=True)
+        observer.start()
+
+        fetch_interval = timedelta(seconds=fetch_interval)
+        send_wait = timedelta(seconds=send_wait)
+        last_fetch = datetime.now() - fetch_interval
+
+        try:
+            while True:
+                time.sleep(1)
+
+                if datetime.now() - fetch_interval >= last_fetch:
+                    self.fetch_changes()
+                    last_fetch = datetime.now()
+
+                sent_change = False
+                with changes.lock:
+                    if changes.found:
+                        for note in changes.found:
+                            send = False
+                            filename = note.filename
+                            pathname = os.path.join(self.directory, filename)
+                            if os.path.exists(pathname):
+                                stamp = datetime.fromtimestamp(
+                                    os.path.getmtime(pathname)
+                                )
+                                if stamp + send_wait < datetime.now():
+                                    send = True
+                            else:
+                                send = True
+                            if send:
+                                self.send_one_change(note)
+                                sent_change = True
+                        changes.found = self.list_changed_notes()
+                if sent_change:
+                    self.fetch_changes()
+
+        except KeyboardInterrupt:
+            observer.stop()
+        observer.join()
+
+    def list_changed_notes(self):
         notes = self.get_local_note_state()
-        changed = list(filter(
+        return list(filter(
             lambda note: note.state != 'unchanged',
             notes
         ))
 
-        for note in changed:
-            if note.state == 'deleted':
-                self.trash_note(note)
-                print('XX', note.filename)
-            elif note.state == 'new':
-                new_note = self.send_note_update(note)
-                print('++ note "%s" (%s)' % (note.filename, new_note['key']))
-            else:
-                note.content = note.filename[:-4] + "\n\n" + note.body
-                new_note = self.send_note_update(note)
-                print('>>', note.filename)
-        self.fetch_changes()
+    def send_one_change(self, note):
+        if note.state == 'deleted':
+            self.trash_note(note)
+            print('XX', note.filename)
+        elif note.state == 'new':
+            new_note = self.send_note_update(note)
+            print('++ note "%s" (%s)' % (note.filename, new_note['key']))
+        else:
+            note.content = note.filename[:-4] + "\n\n" + note.body
+            new_note = self.send_note_update(note)
+            self.notes[note.key] = Note(new_note)
+            print('>>', note.filename)
 
     def get_note_updates(self):
         notes, error = self.simplenote_api.get_note_list(since=self.cursor)
