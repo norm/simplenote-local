@@ -26,10 +26,11 @@ class Note:
         self.version = int(note.get('version', '0'))
         self.state = note.get('state', '')
         self.fingerprint = note.get('fingerprint', None)
-        self.filename = note.get('filename', '')
+        self.title = note.get('title', '')
         content = note.get('content', None)
         if content:
-            self.filename, self.body, self.fingerprint = self.process_content()
+            self.title, self.body, self.fingerprint = self.process_content()
+        self.filename = note.get('filename', '%s.txt' % self.title)
 
     def fix_text_problems(self, text):
         text = text.replace(u'\xa0', u' ')
@@ -42,20 +43,20 @@ class Note:
         first_line = re.sub(r'[/:\*«»]', '', first_line)
 
         # trim filenames to max 60 chars, but on a word boundary
-        filename = first_line
+        title = first_line
         if len(first_line) > 60:
             trimmed = first_line[0:61]
             try:
-                filename = trimmed[0:trimmed.rindex(' ')]
+                title = trimmed[0:trimmed.rindex(' ')]
             except ValueError:
-                filename = trimmed
+                title = trimmed
 
         # beware of first line being unusable
-        if len(filename) == 0:
-            filename = self.key
+        if len(title) == 0:
+            title = self.key
 
         body = (
-            first_line[len(filename):].lstrip()
+            first_line[len(title):].lstrip()
             + '\n'
             + '\n'.join(content.split('\n')[1:])
         )
@@ -63,7 +64,7 @@ class Note:
             body = body[2:]
 
         return(
-            filename + '.txt',
+            title,
             body,
             hashlib.sha256(body.encode('utf-8')).hexdigest(),
         )
@@ -91,6 +92,7 @@ class Note:
             'creationDate': self.created,
             'key': self.key,
             'version': self.version,
+            'title': self.title,
             'filename': self.filename,
             'fingerprint': self.fingerprint,
             # state is internal flag, not useful to preserve
@@ -116,6 +118,10 @@ class SimplenoteLocal:
             if update.key in self.notes:
                 current = self.notes[update.key]
 
+            if current and not current.deleted and current.title == update.title:
+                # continue using the established filename
+                update.filename = current.filename
+
             # if a new file, or the filename has changed, ensure that the
             # filename remains unique (there is nothing to stop you creating
             # multiple notes with the same exact text/first line)
@@ -126,14 +132,19 @@ class SimplenoteLocal:
                     if not by_filename:
                         unique_filename = True
                     else:
-                        if by_filename.deleted:
-                            unique_filename = True
-                        else:
-                            update.increment_filename()
+                        update.increment_filename()
+
+            if current and not current.deleted and current.filename != update.filename:
+                os.rename(
+                    os.path.join(self.directory, current.filename),
+                    os.path.join(self.directory, update.filename),
+                )
+                print('  ', current.filename, '->', update.filename)
 
             if update.deleted:
                 if current and not current.deleted:
                     self.remove_note_file(update)
+                update.filename = ''
             else:
                 self.save_note_file(update)
 
@@ -236,6 +247,8 @@ class SimplenoteLocal:
     def get_note_by_filename(self, filename):
         for key in self.notes:
             note = self.notes[key]
+            if note.deleted:
+                continue
             if note.filename.lower() == filename.lower():
                 return note
         return None
