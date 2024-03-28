@@ -28,6 +28,11 @@ def main():
         ),
         user = os.getenv('SIMPLENOTE_LOCAL_USER'),
         password = os.getenv('SIMPLENOTE_LOCAL_PASSWORD'),
+        editor = os.getenv(
+            'SIMPLENOTE_LOCAL_EDITOR',
+                os.getenv('VISUAL',
+                    os.getenv('EDITOR', 'vi'),
+        )),
     )
 
     parser = argparse.ArgumentParser()
@@ -40,6 +45,18 @@ def main():
         '--send',
         action = 'store_true',
         help = 'Send local changes to notes to Simplenote',
+    )
+
+    notes = parser.add_mutually_exclusive_group()
+    notes.add_argument(
+        '--list',
+        action = 'store_true',
+        help = 'List notes that contain any words in [matches ...]. Will list all notes if no list supplied.',
+    )
+    notes.add_argument(
+        '--edit',
+        action = 'store_true',
+        help = 'Edit notes that contain any words in [matches ...]. Default option if no other flags given. To edit an exact note, spaces in the filename must be quoted.',
     )
 
     sync = parser.add_argument_group('Continual syncing')
@@ -61,6 +78,12 @@ def main():
         default = 60,
     )
 
+    parser.add_argument(
+        'matches',
+        nargs = '*',
+        help = 'Words or word fragments that must appear in a note when listing or editing notes.',
+    )
+
     args = parser.parse_args()
 
     if args.watch:
@@ -69,6 +92,11 @@ def main():
         local.send_changes()
     elif args.fetch:
         local.fetch_changes()
+    elif args.list:
+        local.list_matching_notes(args.matches)
+    else:
+        # --edit is the default
+        local.edit_matching_notes(args.matches)
 
 
 if __name__ == '__main__':

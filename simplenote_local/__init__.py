@@ -1,10 +1,12 @@
 from copy import deepcopy
 from datetime import datetime, timedelta
 import hashlib
+import nltk
 import os
 import pickle
 import re
 from simplenote import Simplenote
+import subprocess
 import sys
 import time
 import toml
@@ -102,13 +104,20 @@ class Note:
 
 
 class SimplenoteLocal:
-    def __init__(self, directory='.', user=False, password=False):
+    def __init__(self, directory='.', user=False, password=False, editor='ed'):
         self.directory = directory
+        self.editor = editor
         self.user = user
         self.password = password
         self.simplenote_api = Simplenote(self.user, self.password)
-        self.notes, self.cursor = self.load_data()
+        self.notes, self.cursor, self.words = self.load_data()
         os.makedirs(self.directory, exist_ok=True)
+
+        try:
+            self.stop_words = set(nltk.corpus.stopwords.words('english'))
+        except:
+            nltk.download('stopwords')
+            self.stop_words = set(nltk.corpus.stopwords.words('english'))
 
     def fetch_changes(self):
         updates = self.get_note_updates()
@@ -146,6 +155,7 @@ class SimplenoteLocal:
                     self.remove_note_file(update)
                 update.filename = ''
             else:
+                self.add_to_words_cache(update.filename, update.content)
                 self.save_note_file(update)
 
             self.notes[update.key] = update
@@ -216,6 +226,57 @@ class SimplenoteLocal:
         except KeyboardInterrupt:
             observer.stop()
         observer.join()
+
+    def list_matching_notes(self, matches):
+        for note in self.find_matching_notes(matches):
+            print('"{}"'.format(note.replace('"', '\\"')))
+
+    def edit_matching_notes(self, matches):
+        command = [self.editor]
+
+        matching = self.find_matching_notes(matches)
+        if not matching:
+            # double check we're not trying to create new file(s)
+            for match in matches:
+                if ' ' in match:
+                    matching.add("%s.txt" % match)
+
+        if matching:
+            for note in matching:
+                pathname = os.path.join(self.directory, note)
+                command.append(pathname)
+            print(command)
+            subprocess.run(command, check=True)
+        else:
+            sys.exit("No matching notes found.")
+
+        changes = False
+        for note in self.list_changed_notes():
+            for match in matching:
+                if note.filename.lower() == match.lower():
+                    self.send_one_change(note)
+                    changes = True
+        if changes:
+            self.fetch_changes()
+
+    def find_matching_notes(self, matches):
+        notes = set(
+            note.filename for note in self.get_local_note_state()
+        )
+        for match in matches:
+            matching = set()
+            if ' ' in match:
+                for note in notes:
+                    if match.lower() in note.lower():
+                        matching = set([note,])
+            else:
+                for word in self.words:
+                    if match in word:
+                        matching = matching.union(
+                            set(self.words[word])
+                        )
+            notes = notes.intersection(matching)
+        return notes
 
     def list_changed_notes(self):
         notes = self.get_local_note_state()
@@ -308,6 +369,7 @@ class SimplenoteLocal:
                     note.body = content
                     note.modified = current
                     note.state = 'changed'
+                    self.add_to_words_cache(filename, content)
                 del expected_files[filename]
                 local_notes.append(note)
             else:
@@ -318,6 +380,7 @@ class SimplenoteLocal:
                     'filename': filename,
                     'state': 'new',
                 })
+                self.add_to_words_cache(filename, content)
                 local_notes.append(note)
 
         # deal with any known notes now removed
@@ -357,6 +420,28 @@ class SimplenoteLocal:
             # but it has already been removed -- so, not an error
             pass
 
+        for word in self.words:
+            try:
+                self.words[word].remove(note.filename)
+            except KeyError:
+                pass
+            except ValueError:
+                pass
+
+    def add_to_words_cache(self, filename, content):
+        words = set(
+            word for word in [
+                re.sub(r'[\W_]+', '', word.lower())
+                    for word in re.split(r'\b', filename[:-4] + content)
+                ] if word and len(word) < 30 and word not in self.stop_words
+        )
+        for word in words:
+            if word not in self.words:
+                self.words[word] = [ filename, ]
+            else:
+                if filename not in self.words[word]:
+                    self.words[word].append(filename)
+
     def notes_as_dict(self):
         dict = {}
         for key in self.notes:
@@ -368,24 +453,27 @@ class SimplenoteLocal:
             with open(os.path.join(self.directory, 'notes.data'), 'rb') as handle:
                 data = pickle.load(handle)
         except FileNotFoundError:
-            data = {'notes': {}, 'cursor': ''}
+            data = {'notes': {}, 'cursor': '', 'words': {}}
 
         # rehydrate the stored dicts as Note objects
         notes = {}
+        words = {}
         for key in data['notes']:
             notes[key] = Note(data['notes'][key])
 
-        return notes, data['cursor']
+        return notes, data['cursor'], data['words']
 
     def save_data(self):
         with open(os.path.join(self.directory, 'notes.data'), 'wb') as handle:
             pickle.dump({
                 'notes': self.notes_as_dict(),
                 'cursor': self.cursor,
+                'words': self.words,
             }, handle)
         with open(os.path.join(self.directory, 'notes.toml'), 'w') as handle:
             toml.dump({
                 'notes': self.notes_as_dict(),
                 'cursor': self.cursor,
+                'words': self.words,
             }, handle)
 
