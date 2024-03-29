@@ -482,16 +482,19 @@ class SimplenoteLocal:
             # include the state that the file has been removed,
             # but it has already been removed -- so, not an error
             pass
+        self.remove_file_from_words_cache(note.filename)
 
+    def remove_file_from_words_cache(self, filename):
         for word in self.words:
             try:
-                self.words[word].remove(note.filename)
+                self.words[word].remove(filename)
             except KeyError:
                 pass
             except ValueError:
                 pass
 
     def add_to_words_cache(self, filename, content):
+        self.remove_file_from_words_cache(filename)
         words = set(
             word for word in [
                 re.sub(r'[\W_]+', '', word.lower())
