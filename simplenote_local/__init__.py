@@ -29,6 +29,7 @@ class Note:
         self.state = note.get('state', '')
         self.fingerprint = note.get('fingerprint', None)
         self.title = note.get('title', '')
+        self.body = note.get('body', '')
         content = note.get('content', None)
         if content:
             self.title, self.body, self.fingerprint = self.process_content()
@@ -250,6 +251,42 @@ class SimplenoteLocal:
                 count = count + 's'
             print(tag.ljust(max_width), count)
 
+    def add_tag(self, tag, matches):
+        matching = self.find_matching_notes(matches)
+        sent_change = False
+        for match in matching:
+            if tag not in match.tags:
+                match.tags.append(tag)
+
+                # touch the file even though the contents haven't changed
+                pathname = os.path.join(self.directory, match.filename)
+                now = int(datetime.now().timestamp())
+                os.utime(pathname, (now, now))
+                match.modified = now
+
+                self.send_one_change(match)
+                sent_change = True
+        if sent_change:
+            self.fetch_changes()
+
+    def remove_tag(self, tag, matches):
+        matching = self.find_matching_notes(matches)
+        sent_change = False
+        for match in matching:
+            if tag in match.tags:
+                match.tags.remove(tag)
+
+                # touch the file even though the contents haven't changed
+                pathname = os.path.join(self.directory, match.filename)
+                now = int(datetime.now().timestamp())
+                os.utime(pathname, (now, now))
+                match.modified = now
+
+                self.send_one_change(match)
+                sent_change = True
+        if sent_change:
+            self.fetch_changes()
+
     def edit_matching_notes(self, matches):
         command = [self.editor]
         matching = self.find_matching_notes(matches)
@@ -384,28 +421,29 @@ class SimplenoteLocal:
             pathname = os.path.join(self.directory, filename)
             current = int(os.path.getmtime(pathname))
             with open(pathname, 'r') as handle:
-                content = handle.read()
-                sha = hashlib.sha256(content.encode('utf-8')).hexdigest()
+                body = handle.read()
+                sha = hashlib.sha256(body.encode('utf-8')).hexdigest()
 
             if filename in expected_files:
                 note = deepcopy(self.notes[expected_files[filename]])
+                note.body = body
                 note.state = 'unchanged'
                 if current != note.modified or sha != note.fingerprint:
-                    note.body = content
                     note.modified = current
                     note.state = 'changed'
-                    self.add_to_words_cache(filename, content)
+                    self.add_to_words_cache(filename, body)
                 del expected_files[filename]
                 local_notes.append(note)
             else:
                 note = Note({
                     'creationDate': current,
                     'modificationDate': current,
-                    'content': filename[:-4] + "\n\n" + content,
+                    'body': body,
+                    'content': filename[:-4] + "\n\n" + body,
                     'filename': filename,
                     'state': 'new',
                 })
-                self.add_to_words_cache(filename, content)
+                self.add_to_words_cache(filename, body)
                 local_notes.append(note)
 
         # deal with any known notes now removed

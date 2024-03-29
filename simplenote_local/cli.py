@@ -59,6 +59,16 @@ def main():
         help = 'List all tags in use.',
     )
     notes.add_argument(
+        '--add-tag',
+        type = str,
+        help = 'Add a tag to matching notes.'
+    )
+    notes.add_argument(
+        '--remove-tag',
+        type = str,
+        help = 'Remove a tag from matching notes.'
+    )
+    notes.add_argument(
         '--edit',
         action = 'store_true',
         help = 'Edit notes that contain any words in [matches ...]. Default option if no other flags given. To edit an exact note, spaces in the filename must be quoted.',
@@ -101,6 +111,10 @@ def main():
         local.list_matching_notes(args.matches)
     elif args.list_tags:
         local.list_tags()
+    elif args.add_tag:
+        local.add_tag(args.add_tag, args.matches)
+    elif args.remove_tag:
+        local.remove_tag(args.remove_tag, args.matches)
     else:
         # --edit is the default
         local.edit_matching_notes(args.matches)

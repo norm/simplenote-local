@@ -99,3 +99,17 @@ does not need to be included.
 
     simplenote "key lime pie"
     simplenote key\ lime\ pie
+
+To add a tag to matching notes:
+
+    simplenote --add-tag recipe key lime pie
+
+To remove a tag from matching notes:
+
+    simplenote --remove-tag recipe key lime pie
+
+To remove a tag from all notes:
+
+    simplenote --remove-tag recipe
+
+
