@@ -276,7 +276,7 @@ class SimplenoteLocal:
                             set(self.words[word])
                         )
             notes = notes.intersection(matching)
-        return notes
+        return sorted(notes, key=lambda note: note.modified, reverse=True)
 
     def list_changed_notes(self):
         notes = self.get_local_note_state()
