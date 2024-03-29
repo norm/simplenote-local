@@ -38,15 +38,16 @@ file is changed again in quick succession). These timings can be overridden.
     simplenote --fetch-interval 60 --send-wait 0 --watch
 
 
-## Finding and editing notes
+## Finding notes
 
-List all notes.
+To list all notes:
 
     simplenote --list
 
-List only those notes that contain one or more words either in the filename,
-or in the file contents. The notes are sorted with the most recently edited
-files first.
+The notes are sorted with the most recently edited files first.
+
+To list only those notes that contain one or more words either in the
+filename, or in the file contents:
 
     simplenote --list recipe rice
 
@@ -54,20 +55,39 @@ Words are searched as fragments, not whole words. For example, `simplenote
 --list recipe rice` would also find recipe notes that included the word
 "ricer" or "liquorice".
 
-Edit all notes. **Note:** unless your editor is fast at loading multiple
-files, or loads them one at a time (like vi), this could be painfully slow
-once you have a lot of notes.
+To list notes that have a specific tag applied, you can use either `#tag`
+or `%tag` notation. Hashes are more commonly used in social media, but
+in the shell it starts a comment, so would need to be quoted.
+
+    simplenote --list \#recipe
+    simplenote --list %recipe pie
+
+To list all available tags:
+
+    simplenote --list-tags
+
+
+## Editing notes
+
+To edit all notes:
 
     simplenote --edit
 
-Override your default `VISUAL` and/or `EDITOR` environment variables.
+**Note:** unless your editor is fast at loading multiple files, or loads
+them one at a time (like vi), this could be painfully slow once you have
+a lot of notes.
+
+To override the editor your default `VISUAL` and/or `EDITOR` environment
+variables would specify:
 
     export SIMPLENOTE_LOCAL_EDITOR=sublime
     simplenote --edit
 
-Edit only those notes that would match using the same rules as `--list`.
+To edit only those notes that would match using the same rules as `--list`:
 
     simplenote --edit key lime pie
+    simplenote --edit "key lime pie"
+    simplenote --edit %recipe pie
 
 Editing is the default, so the flag can be omitted.
 

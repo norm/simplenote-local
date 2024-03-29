@@ -229,52 +229,77 @@ class SimplenoteLocal:
 
     def list_matching_notes(self, matches):
         for note in self.find_matching_notes(matches):
-            print('"{}"'.format(note.replace('"', '\\"')))
+            filename = note.filename.replace('"', '\\"')
+            tags = ''
+            if note.tags:
+                tags = ' #' + ' #'.join(note.tags)
+            print(f'"{filename}"{tags}')
+
+    def list_tags(self):
+        tags = dict()
+        for note in self.get_local_note_state():
+            for tag in note.tags:
+                if tag in tags:
+                    tags[tag] += 1
+                else:
+                    tags[tag] = 1
+        max_width = max(len(tag) for tag in tags)
+        for tag in sorted(tags, key=lambda tag: tag.lower()):
+            count = '  %d note' % tags[tag]
+            if tags[tag] > 1:
+                count = count + 's'
+            print(tag.ljust(max_width), count)
 
     def edit_matching_notes(self, matches):
         command = [self.editor]
-
         matching = self.find_matching_notes(matches)
+
+        # double check we're not trying to create new file(s)
         if not matching:
-            # double check we're not trying to create new file(s)
             for match in matches:
                 if ' ' in match:
-                    matching.add("%s.txt" % match)
+                    matching.add(Note({
+                        'filename': match + '.txt',
+                        'state': 'new',
+                    }))
 
         if matching:
             for note in matching:
-                pathname = os.path.join(self.directory, note)
+                pathname = os.path.join(self.directory, note.filename)
                 command.append(pathname)
-            print(command)
+
             subprocess.run(command, check=True)
+
+            changes = False
+            for note in self.list_changed_notes():
+                for match in matching:
+                    if note.filename.lower() == match.filename.lower():
+                        self.send_one_change(note)
+                        changes = True
+            if changes:
+                self.fetch_changes()
         else:
             sys.exit("No matching notes found.")
 
-        changes = False
-        for note in self.list_changed_notes():
-            for match in matching:
-                if note.filename.lower() == match.lower():
-                    self.send_one_change(note)
-                    changes = True
-        if changes:
-            self.fetch_changes()
-
     def find_matching_notes(self, matches):
-        notes = set(
-            note.filename for note in self.get_local_note_state()
-        )
+        notes = set(self.get_local_note_state())
         for match in matches:
             matching = set()
-            if ' ' in match:
+            if match.startswith('#') or match.startswith('%'):
                 for note in notes:
-                    if match.lower() in note.lower():
-                        matching = set([note,])
+                    if match[1:] in note.tags:
+                        matching.add(note)
+            elif ' ' in match:
+                for note in notes:
+                    if match.lower() in note.filename.lower():
+                        matching.add(note)
             else:
                 for word in self.words:
                     if match in word:
-                        matching = matching.union(
-                            set(self.words[word])
-                        )
+                        for note in notes:
+                            for filename in self.words[word]:
+                                if note.filename == filename:
+                                    matching.add(note)
             notes = notes.intersection(matching)
         return sorted(notes, key=lambda note: note.modified, reverse=True)
 
