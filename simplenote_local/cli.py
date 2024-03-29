@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 from simplenote_local import SimplenoteLocal
 
 
@@ -101,24 +102,29 @@ def main():
 
     args = parser.parse_args()
 
-    if args.watch:
-        local.watch_for_changes(args.fetch_interval, args.send_wait)
-    elif args.send:
-        local.send_changes()
-    elif args.fetch:
-        local.fetch_changes()
-    elif args.list:
-        local.list_matching_notes(args.matches)
-    elif args.list_tags:
-        local.list_tags()
-    elif args.add_tag:
-        local.add_tag(args.add_tag, args.matches)
-    elif args.remove_tag:
-        local.remove_tag(args.remove_tag, args.matches)
-    else:
-        # --edit is the default
-        local.edit_matching_notes(args.matches)
+    try:
+        if args.watch:
+            local.watch_for_changes(args.fetch_interval, args.send_wait)
+        elif args.send:
+            local.send_changes()
+        elif args.fetch:
+            local.fetch_changes()
+        elif args.list:
+            local.list_matching_notes(args.matches)
+        elif args.list_tags:
+            local.list_tags()
+        elif args.add_tag:
+            local.add_tag(args.add_tag, args.matches)
+        elif args.remove_tag:
+            local.remove_tag(args.remove_tag, args.matches)
+        else:
+            # --edit is the default
+            local.edit_matching_notes(args.matches)
 
+    except BrokenPipeError:
+        # don't need to see an error when output is truncated, eg `...|head`
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, sys.stdout.fileno())
 
 if __name__ == '__main__':
     main()
