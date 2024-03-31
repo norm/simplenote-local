@@ -346,6 +346,60 @@ class SimplenoteLocal:
         new_note = self.send_one_change(note)
         self.fetch_changes()
 
+    def trash_notes(self, matches):
+        sent_change = False
+        for match in self.find_matching_notes(matches):
+            match.state = 'deleted'
+            self.remove_note_file(match, 'quiet')
+            self.send_one_change(match)
+            sent_change = True
+
+        if sent_change:
+            self.fetch_changes()
+
+    def restore_notes(self, matches):
+        sent_change = False
+        for key in self.notes:
+            note = self.notes[key]
+            if note.deleted:
+                for match in matches:
+                    if match.lower() in note.title.lower():
+                        latest, error = self.simplenote_api.get_note(note.key)
+                        if error:
+                            sys.exit(error)
+                        latest = Note(latest)
+                        latest.deleted = False
+                        latest.modified = datetime.now().timestamp()
+                        pathname = os.path.join(self.directory, latest.filename)
+                        with open(pathname, 'w') as handle:
+                            handle.write(latest.body)
+                        os.utime(pathname, (latest.modified, latest.modified))
+                        self.send_one_change(latest)
+                        sent_change = True
+
+        if sent_change:
+            self.fetch_changes()
+
+    def purge_notes(self, matches):
+        sent_change = False
+        deleted = []
+        for key in self.notes:
+            note = self.notes[key]
+            if note.deleted:
+                for match in matches:
+                    if match.lower() in note.title.lower():
+                        _, error = self.simplenote_api.delete_note(note.key)
+                        if error:
+                            sys.exit(error)
+                        sent_change = True
+                        print('XX', note.title)
+                        deleted.append(note.key)
+
+        if sent_change:
+            for key in deleted:
+                del self.notes[key]
+            self.fetch_changes()
+
     def find_matching_notes(self, matches):
         notes = set(self.get_local_note_state())
         for match in matches:
@@ -390,9 +444,9 @@ class SimplenoteLocal:
         else:
             note.content = note.filename[:-4] + "\n\n" + note.body
             new_note = self.send_note_update(note)
+            self.save_note_file(new_note)
             print('>>', new_note.filename)
         self.notes[new_note.key] = new_note
-        self.save_note_file(new_note)
         return new_note
 
     def get_note_updates(self):
@@ -507,11 +561,12 @@ class SimplenoteLocal:
             else:
                 print('<<', note.filename)
 
-    def remove_note_file(self, note):
+    def remove_note_file(self, note, quiet=False):
         pathname = os.path.join(self.directory, note.filename)
         try:
             os.remove(pathname)
-            print('--', note.filename)
+            if not quiet:
+                print('--', note.filename)
         except FileNotFoundError:
             # after deleting a file locally the next fetch will
             # include the state that the file has been removed,

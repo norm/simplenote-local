@@ -74,6 +74,21 @@ def main():
         action = 'store_true',
         help = 'Edit notes that contain any words in [matches ...]. Default option if no other flags given. To edit an exact note, spaces in the filename must be quoted.',
     )
+    notes.add_argument(
+        '--trash',
+        action = 'store_true',
+        help = 'Move notes to the Trash.'
+    )
+    notes.add_argument(
+        '--restore',
+        action = 'store_true',
+        help = 'Restore notes from the Trash.'
+    )
+    notes.add_argument(
+        '--purge',
+        action = 'store_true',
+        help = 'Permanently delete notes from the Trash.',
+    )
 
     sync = parser.add_argument_group('Continual syncing')
     sync.add_argument(
@@ -117,6 +132,12 @@ def main():
             local.add_tag(args.add_tag, args.matches)
         elif args.remove_tag:
             local.remove_tag(args.remove_tag, args.matches)
+        elif args.trash:
+            local.trash_notes(args.matches)
+        elif args.restore:
+            local.restore_notes(args.matches)
+        elif args.purge:
+            local.purge_notes(args.matches)
         else:
             # --edit is the default, overloaded to also supporting capturing
             # stdin to a named match or new file (taken from the first line)

@@ -124,3 +124,17 @@ To remove a tag from all notes:
     simplenote --remove-tag recipe
 
 
+## Removing notes
+
+To move all matching notes to the Trash:
+
+    simplenote --trash recipe
+
+To restore a note from the Trash:
+
+    simplenote --restore key lime pie
+
+To permanently delete notes from the Trash:
+
+    simplenote --purge key lime pie
+
