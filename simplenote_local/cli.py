@@ -89,6 +89,16 @@ def main():
         action = 'store_true',
         help = 'Permanently delete notes from the Trash.',
     )
+    notes.add_argument(
+        '--pin',
+        action = 'store_true',
+        help = 'Pin notes (in Simplenote, does nothing in the local copy).'
+    )
+    notes.add_argument(
+        '--unpin',
+        action = 'store_true',
+        help = 'Unpin notes (in Simplenote, does nothing in the local copy).'
+    )
 
     sync = parser.add_argument_group('Continual syncing')
     sync.add_argument(
@@ -138,6 +148,10 @@ def main():
             local.restore_notes(args.matches)
         elif args.purge:
             local.purge_notes(args.matches)
+        elif args.pin:
+            local.pin_notes(args.matches)
+        elif args.unpin:
+            local.unpin_notes(args.matches)
         else:
             # --edit is the default, overloaded to also supporting capturing
             # stdin to a named match or new file (taken from the first line)

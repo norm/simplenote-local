@@ -232,9 +232,12 @@ class SimplenoteLocal:
         for note in self.find_matching_notes(matches):
             filename = note.filename.replace('"', '\\"')
             tags = ''
+            system_tags = ''
             if note.tags:
                 tags = ' #' + ' #'.join(note.tags)
-            print(f'"{filename}"{tags}')
+            if 'pinned' in note.system_tags:
+                system_tags = ' pinned' 
+            print(f'"{filename}"{system_tags}{tags}')
 
     def list_tags(self):
         tags = dict()
@@ -400,6 +403,26 @@ class SimplenoteLocal:
                 del self.notes[key]
             self.fetch_changes()
 
+    def pin_notes(self, matches):
+        sent_change = False
+        for match in self.find_matching_notes(matches):
+            match.system_tags.append('pinned')
+            self.send_one_change(match)
+            sent_change = True
+
+        if sent_change:
+            self.fetch_changes()
+
+    def unpin_notes(self, matches):
+        sent_change = False
+        for match in self.find_matching_notes(matches):
+            match.system_tags.remove('pinned')
+            self.send_one_change(match)
+            sent_change = True
+
+        if sent_change:
+            self.fetch_changes()
+
     def find_matching_notes(self, matches):
         notes = set(self.get_local_note_state())
         for match in matches:
@@ -420,7 +443,12 @@ class SimplenoteLocal:
                                 if note.filename == filename:
                                     matching.add(note)
             notes = notes.intersection(matching)
-        return sorted(notes, key=lambda note: note.modified, reverse=True)
+
+        return sorted(
+            notes,
+            key=lambda note: ('pinned' in note.system_tags, note.modified),
+            reverse=True,
+        )
 
     def list_changed_notes(self):
         notes = self.get_local_note_state()

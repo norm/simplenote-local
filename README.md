@@ -138,3 +138,17 @@ To permanently delete notes from the Trash:
 
     simplenote --purge key lime pie
 
+
+## Pinning notes
+
+**Note:** pinned notes appear at the top of the notes list in the Simplenote
+interface. In the local copy, it will sort those notes to the top when using
+`simplenote --list`, nothing else.
+
+To pin all matching notes:
+
+    simplenote --pin key lime pie
+
+To unpin all matching notes:
+
+    simplenote --unpin key lime pie
