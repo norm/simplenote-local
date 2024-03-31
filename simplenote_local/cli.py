@@ -118,8 +118,12 @@ def main():
         elif args.remove_tag:
             local.remove_tag(args.remove_tag, args.matches)
         else:
-            # --edit is the default
-            local.edit_matching_notes(args.matches)
+            # --edit is the default, overloaded to also supporting capturing
+            # stdin to a named match or new file (taken from the first line)
+            if not sys.stdin.isatty():
+                local.capture_stdin(args.matches)
+            else:
+                local.edit_matching_notes(args.matches)
 
     except BrokenPipeError:
         # don't need to see an error when output is truncated, eg `...|head`

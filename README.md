@@ -100,6 +100,17 @@ does not need to be included.
     simplenote "key lime pie"
     simplenote key\ lime\ pie
 
+To pipe the output of a command into a note, creating it if it doesn't
+already exist:
+
+    curl https://.../cake-recipe.html | simplenote "cake recipe"
+
+**Notes:**
+* If the argument(s) match more than one existing note, only the first match
+  will be updated.
+* If no match is given, the note will be named after the first line of the
+  output.
+
 To add a tag to matching notes:
 
     simplenote --add-tag recipe key lime pie

@@ -288,19 +288,19 @@ class SimplenoteLocal:
             self.fetch_changes()
 
     def edit_matching_notes(self, matches):
-        command = [self.editor]
         matching = self.find_matching_notes(matches)
 
         # double check we're not trying to create new file(s)
         if not matching:
             for match in matches:
                 if ' ' in match:
-                    matching.add(Note({
+                    matching.append(Note({
                         'filename': match + '.txt',
                         'state': 'new',
                     }))
 
         if matching:
+            command = [self.editor]
             for note in matching:
                 pathname = os.path.join(self.directory, note.filename)
                 command.append(pathname)
@@ -317,6 +317,34 @@ class SimplenoteLocal:
                 self.fetch_changes()
         else:
             sys.exit("No matching notes found.")
+
+    def capture_stdin(self, matches):
+        body = sys.stdin.read()
+        now = int(datetime.now().timestamp())
+
+        if matches:
+            matching = self.find_matching_notes(matches)
+            if matching:
+                note = matching[0]
+                note.body = body
+                note.modified = now
+            else:
+                note = Note({
+                    'creationDate': now,
+                    'modificationDate': now,
+                    'content': matches[0] + "\n\n" + body,
+                    'state': 'new',
+                })
+        else:
+            note = Note({
+                'creationDate': now,
+                'modificationDate': now,
+                'content': body,
+                'state': 'new',
+            })
+
+        new_note = self.send_one_change(note)
+        self.fetch_changes()
 
     def find_matching_notes(self, matches):
         notes = set(self.get_local_note_state())
@@ -349,16 +377,23 @@ class SimplenoteLocal:
 
     def send_one_change(self, note):
         if note.state == 'deleted':
-            self.trash_note(note)
+            new_note = self.trash_note(note)
+            new_note = Note(new_note)
             print('XX', note.filename)
         elif note.state == 'new':
             new_note = self.send_note_update(note)
-            print('++ note "%s" (%s)' % (note.filename, new_note['key']))
+            pathname = os.path.join(self.directory, new_note.filename)
+            with open(pathname, 'w') as handle:
+                handle.write(new_note.body)
+            os.utime(pathname, (new_note.modified, new_note.modified))
+            print('++ note "%s" (%s)' % (note.filename, new_note.key))
         else:
             note.content = note.filename[:-4] + "\n\n" + note.body
             new_note = self.send_note_update(note)
-            self.notes[note.key] = Note(new_note)
-            print('>>', note.filename)
+            print('>>', new_note.filename)
+        self.notes[new_note.key] = new_note
+        self.save_note_file(new_note)
+        return new_note
 
     def get_note_updates(self):
         notes, error = self.simplenote_api.get_note_list(since=self.cursor)
@@ -392,7 +427,7 @@ class SimplenoteLocal:
         new_note, error = self.simplenote_api.update_note(update)
         if error:
             sys.exit('Error updating note "%s": %s.' % (note.filename, new_note))
-        return new_note
+        return Note(new_note)
 
     def trash_note(self, note):
         new_note, error = self.simplenote_api.trash_note(note.key)
