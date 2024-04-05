@@ -163,3 +163,26 @@ To tell Simplenote to publish notes to a web page:
 To tell Simplenote to remove published notes:
 
     simplenote --unpublish key lime pie
+
+
+## Collaborating on notes
+
+To collaborate with others on a note, you can add a tag to a note which is the
+email address of another user:
+
+    simplenote --add-tag norm@example.com key lime pie
+
+To stop sharing the note with them, remove the tag again:
+
+    simplenote --remove-tag norm@example.com key lime pie
+
+**Note:** There are two wrinkles with this implementation of sharing:
+
+1. If that email is not already registered with Simplenote there appears to be
+   no notification to them that they could sign up to collaborate with you --
+   that is, you either have to be sure they already use Simplenote, or inform
+   them yourself to sign up in order to be able to work together on a note.
+
+2. When you later unshare a note, the other account keeps a copy of the
+   original note as it was immediately before unsharing, which may be
+   unexpected behaviour and not what you want.

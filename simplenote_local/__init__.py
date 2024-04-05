@@ -90,6 +90,15 @@ class Note:
             return 'https://app.simplenote.com/p/%s' % self.publish_url
         return ''
 
+    @property
+    def tag_list(self):
+        list = []
+        for tag in self.tags:
+            # exclude tags matching a loose approximation of an email address
+            if not re.match(r'.+@.+\..+', tag):
+                list.append('#' + tag)
+        return ' '.join(list)
+
     def as_dict(self):
         return {
             'tags': self.tags,
@@ -237,16 +246,19 @@ class SimplenoteLocal:
     def list_matching_notes(self, matches):
         for note in self.find_matching_notes(matches):
             filename = note.filename.replace('"', '\\"')
+            pinned = ''
+            shared = ''
             tags = ''
-            system_tags = ''
             url = ''
-            if note.tags:
-                tags = ' #' + ' #'.join(note.tags)
             if 'pinned' in note.system_tags:
-                system_tags = ' pinned' 
+                pinned = ' pinned' 
+            if 'shared' in note.system_tags:
+                shared = ' shared'
+            if note.tags:
+                tags = ' ' + note.tag_list
             if 'published' in note.system_tags:
                 url = ' %s' % note.published_url
-            print(f'"{filename}"{system_tags}{tags}{url}')
+            print(f'"{filename}"{pinned}{shared}{tags}{url}')
 
     def list_tags(self):
         tags = dict()
