@@ -84,6 +84,12 @@ class Note:
         increment = increment + 1
         self.filename = "%s.%d.txt" % (base, increment)
 
+    @property
+    def published_url(self):
+        if self.publish_url:
+            return 'https://app.simplenote.com/p/%s' % self.publish_url
+        return ''
+
     def as_dict(self):
         return {
             'tags': self.tags,
@@ -233,11 +239,14 @@ class SimplenoteLocal:
             filename = note.filename.replace('"', '\\"')
             tags = ''
             system_tags = ''
+            url = ''
             if note.tags:
                 tags = ' #' + ' #'.join(note.tags)
             if 'pinned' in note.system_tags:
                 system_tags = ' pinned' 
-            print(f'"{filename}"{system_tags}{tags}')
+            if 'published' in note.system_tags:
+                url = ' %s' % note.published_url
+            print(f'"{filename}"{system_tags}{tags}{url}')
 
     def list_tags(self):
         tags = dict()
@@ -422,6 +431,48 @@ class SimplenoteLocal:
 
         if sent_change:
             self.fetch_changes()
+
+    def publish_notes(self, matches):
+        sent_change = False
+        for match in self.find_matching_notes(matches):
+            match.system_tags.append('published')
+            self.send_one_change(match)
+            key = match.key
+
+            # sending an update with the 'published' tag also causes a second
+            # change within Simplenote to generate and add the URL fragment,
+            # so give that a little time to happen (but not forever)
+            for _ in range(0, 10):
+                time.sleep(1)
+                self.fetch_changes()
+                note = self.notes[key]
+                if note.publish_url:
+                    break
+
+            if note.publish_url:
+                print('   URL:', note.published_url)
+            else:
+                sys.exit('** Error publishing', note.filename)
+
+    def unpublish_notes(self, matches):
+        sent_change = False
+        for match in self.find_matching_notes(matches):
+            match.system_tags.remove('published')
+            self.send_one_change(match)
+            key = match.key
+
+            # sending an update with the 'published' tag also causes a second
+            # change within Simplenote to generate and add the URL fragment,
+            # so give that a little time to happen (but not forever)
+            for _ in range(0, 10):
+                time.sleep(1)
+                self.fetch_changes()
+                note = self.notes[key]
+                if not note.publish_url:
+                    break
+
+            if note.publish_url:
+                sys.exit('** Error unpublishing', note.filename)
 
     def find_matching_notes(self, matches):
         notes = set(self.get_local_note_state())

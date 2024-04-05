@@ -152,3 +152,14 @@ To pin all matching notes:
 To unpin all matching notes:
 
     simplenote --unpin key lime pie
+
+
+## Publishing notes
+
+To tell Simplenote to publish notes to a web page:
+
+    simplenote --publish key lime pie
+
+To tell Simplenote to remove published notes:
+
+    simplenote --unpublish key lime pie
