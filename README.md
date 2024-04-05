@@ -186,3 +186,8 @@ To stop sharing the note with them, remove the tag again:
 2. When you later unshare a note, the other account keeps a copy of the
    original note as it was immediately before unsharing, which may be
    unexpected behaviour and not what you want.
+
+
+## Show a summary of the metadata stored on a note
+
+    simplenote --info key lime pie

@@ -109,6 +109,11 @@ def main():
         action = 'store_true',
         help = 'Unpublish notes (in Simplenote, does nothing in the local copy).'
     )
+    notes.add_argument(
+        '--info',
+        action = 'store_true',
+        help = 'Show all stored information on notes.'
+    )
 
     sync = parser.add_argument_group('Continual syncing')
     sync.add_argument(
@@ -166,6 +171,8 @@ def main():
             local.publish_notes(args.matches)
         elif args.unpublish:
             local.unpublish_notes(args.matches)
+        elif args.info:
+            local.show_note_state(args.matches)
         else:
             # --edit is the default, overloaded to also supporting capturing
             # stdin to a named match or new file (taken from the first line)

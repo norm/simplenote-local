@@ -99,6 +99,15 @@ class Note:
                 list.append('#' + tag)
         return ' '.join(list)
 
+    @property
+    def share_list(self):
+        list = []
+        for tag in self.tags:
+            # exclude tags matching a loose approximation of an email address
+            if re.match(r'.+@.+\..+', tag):
+                list.append(tag)
+        return ' '.join(list)
+
     def as_dict(self):
         return {
             'tags': self.tags,
@@ -485,6 +494,22 @@ class SimplenoteLocal:
 
             if note.publish_url:
                 sys.exit('** Error unpublishing', note.filename)
+
+    def show_note_state(self, matches):
+        for match in self.find_matching_notes(matches):
+            print(match.filename)
+            print('  created  ', datetime.fromtimestamp(match.created).strftime('%A %d %B %Y %H:%M:%S'))
+            print('  modified ', datetime.fromtimestamp(match.modified).strftime('%A %d %B %Y %H:%M:%S'))
+            if match.tag_list:
+                print('  tagged   ', match.tag_list)
+            if match.share_list:
+                print('  shared   ', match.share_list)
+            if 'pinned' in match.system_tags:
+                print('  pinned')
+            if 'published' in match.system_tags:
+                print('  published', match.published_url)
+            print('  version  ', match.version)
+            print()
 
     def find_matching_notes(self, matches):
         notes = set(self.get_local_note_state())
