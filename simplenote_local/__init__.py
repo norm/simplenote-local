@@ -1,6 +1,8 @@
+from bs4 import BeautifulSoup
 from copy import deepcopy
 from datetime import datetime, timedelta
 import hashlib
+from markdownify import markdownify
 import nltk
 import os
 import pickle
@@ -20,7 +22,6 @@ class Note:
         self.deleted = note.get('deleted', False)
         self.share_url = note.get('shareURL', '')
         self.publish_url = note.get('publishURL', '')
-        self.content = self.fix_text_problems(note.get('content', ''))
         self.system_tags = note.get('systemTags', [])
         self.modified = int(note.get('modificationDate', '0'))
         self.created = int(note.get('creationDate', '0'))
@@ -32,18 +33,22 @@ class Note:
         self.body = note.get('body', '')
         content = note.get('content', None)
         if content:
-            self.title, self.body, self.fingerprint = self.process_content()
+            self.title, self.body = self.title_and_body(content)
+            self.fingerprint = hashlib.sha256(self.body.encode('utf-8')).hexdigest()
+            self.content = content
+        else:
+            self.content = self.title + "\n\n" + self.body
         self.filename = note.get('filename', '%s.txt' % self.title)
 
-    def fix_text_problems(self, text):
+    @classmethod
+    def title_and_body(cls, text):
+        # fix problems with very old notes
         text = text.replace(u'\xa0', u' ')
         text = text.replace(u'\r', u'\n')
-        return text
 
-    def process_content(self):
-        content = self.content
-        first_line = content.split('\n')[0]
+        first_line = text.split('\n')[0]
         first_line = re.sub(r'[/:\*«»]', '', first_line)
+        first_line = re.sub(r'^#+', '', first_line)
 
         # trim filenames to max 60 chars, but on a word boundary
         title = first_line
@@ -54,23 +59,16 @@ class Note:
             except ValueError:
                 title = trimmed
 
-        # beware of first line being unusable
-        if len(title) == 0:
-            title = self.key
-
         body = (
             first_line[len(title):].lstrip()
             + '\n'
-            + '\n'.join(content.split('\n')[1:])
+            + '\n'.join(text.split('\n')[1:])
         )
         if body.startswith('\n\n'):
             body = body[2:]
+        title = title.lstrip()
 
-        return(
-            title,
-            body,
-            hashlib.sha256(body.encode('utf-8')).hexdigest(),
-        )
+        return title, body
 
     def increment_filename(self):
         base = self.filename[:-4]
@@ -351,9 +349,26 @@ class SimplenoteLocal:
         else:
             sys.exit("No matching notes found.")
 
-    def capture_stdin(self, matches):
-        body = sys.stdin.read()
+    def capture_stdin(self, raw, matches):
+        body = sys.stdin.read().replace('\r', '')
+        title = ''
         now = int(datetime.now().timestamp())
+
+        # if the input looks like HTML, markdownify it and extract the first
+        # <h1> tag as the note title (which may not be the first line of text
+        # given global nav etc appearing first in source order)
+        soup = BeautifulSoup(body, 'html.parser')
+        first_header = soup.find('h1')
+        is_html = len(soup.find_all()) > 0
+        if first_header:
+            first_header = first_header.string
+        if is_html:
+            if not raw:
+                body = markdownify(body).lstrip().rstrip()
+                body = re.sub('\n\n\n*', '\n\n', body)
+            title, body = Note.title_and_body(body)
+            if first_header:
+                title = first_header
 
         if matches:
             matching = self.find_matching_notes(matches)
@@ -369,11 +384,18 @@ class SimplenoteLocal:
                     'state': 'new',
                 })
         else:
+            if not title and not body.lstrip():
+                # no completely empty notes
+                title = 'new note'
+            system_tags = []
+            if is_html and not raw:
+                system_tags = ['markdown',]
             note = Note({
                 'creationDate': now,
                 'modificationDate': now,
-                'content': body,
+                'content': title + "\n\n" + body,
                 'state': 'new',
+                'systemTags': system_tags,
             })
 
         new_note = self.send_one_change(note)

@@ -135,6 +135,11 @@ def main():
     )
 
     parser.add_argument(
+        '--raw',
+        action = 'store_true',
+        help = 'Do not Markdownify piped HTML input',
+    )
+    parser.add_argument(
         'matches',
         nargs = '*',
         help = 'Words or word fragments that must appear in a note when listing or editing notes.',
@@ -177,7 +182,7 @@ def main():
             # --edit is the default, overloaded to also supporting capturing
             # stdin to a named match or new file (taken from the first line)
             if not sys.stdin.isatty():
-                local.capture_stdin(args.matches)
+                local.capture_stdin(args.raw, args.matches)
             else:
                 local.edit_matching_notes(args.matches)
 

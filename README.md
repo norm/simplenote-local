@@ -103,13 +103,23 @@ does not need to be included.
 To pipe the output of a command into a note, creating it if it doesn't
 already exist:
 
-    curl https://.../cake-recipe.html | simplenote "cake recipe"
+    pbpaste | simplenote "cake recipe"
 
 **Notes:**
 * If the argument(s) match more than one existing note, only the first match
   will be updated.
 * If no match is given, the note will be named after the first line of the
   output.
+
+If the input looks like HTML, it will be passed through
+[markdownify](https://pypi.org/project/markdownify/) first. You can disable
+this step with with the `--raw` option:
+
+    curl https://.../cake-recipe.html | simplenote "cake recipe"
+    curl https://.../cake-recipe.html | simplenote --raw "html cake recipe"
+
+
+## Tagging notes
 
 To add a tag to matching notes:
 

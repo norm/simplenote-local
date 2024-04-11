@@ -10,6 +10,8 @@ setup(
         ],
     },
     install_requires=[
+        'beautifulsoup4',
+        'markdownify',
         'nltk',
         'simplenote',
         'toml',
