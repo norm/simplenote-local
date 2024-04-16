@@ -352,7 +352,20 @@ class SimplenoteLocal:
             if changes:
                 self.save_data()
         else:
-            sys.exit("No matching notes found.")
+            print("""** No notes found matching all of: %s.
+
+To edit an individual note using this tool, the filename must contain a space
+and the space must be quoted in the command:
+
+    simplenote --edit "key lime"
+
+Otherwise, this tool is looking for files with both the words "key" and
+"lime" in them, not a new file.""" % (
+                    (', '.join('"' + match + '"' for match in matches)),
+                ),
+                file=sys.stderr
+            )
+            sys.exit(1)
 
     def capture_stdin(self, raw, matches):
         body = sys.stdin.read().replace('\r', '')
