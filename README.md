@@ -225,9 +225,13 @@ To get a list of all available historical versions of matching notes:
 
     simplenote --history --full key lime pie
 
-To restore an older version of a single note:
+To show the metadata and content of an older version of a single note:
 
-    simplenote --restore-note "key lime pie" 22
+    simplenote --show-version "key lime pie" 22
+
+To restore the content and tags of an older version of a single note:
+
+    simplenote --restore-version "key lime pie" 22
 
 **Note:** In this instance, the name of the note needs to be quoted to make it
 the first argument to the command, as the second argument is the version.

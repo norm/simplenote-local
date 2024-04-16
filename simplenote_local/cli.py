@@ -120,6 +120,11 @@ def main():
         help = 'List older versions of a note.'
     )
     notes.add_argument(
+        '--show-version',
+        nargs = 2,
+        help = 'Show metdata and content for another version of a note.',
+    )
+    notes.add_argument(
         '--restore-version',
         nargs = 2,
         help = 'Restore an older version of a note.'
@@ -192,9 +197,11 @@ def main():
         elif args.unpublish:
             local.unpublish_notes(args.matches)
         elif args.info:
-            local.show_note_state(args.matches)
+            local.show_note_info(args.matches)
         elif args.history:
             local.show_note_history(args.matches, args.full)
+        elif args.show_version:
+            local.show_note_version(args.show_version)
         elif args.restore_version:
             local.restore_note_version(args.restore_version)
         else:

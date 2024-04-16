@@ -517,21 +517,24 @@ class SimplenoteLocal:
             if note.publish_url:
                 sys.exit('** Error unpublishing', note.filename)
 
-    def show_note_state(self, matches):
+    def show_note_info(self, matches):
         for match in self.find_matching_notes(matches):
-            print(match.filename)
-            print('  created  ', datetime.fromtimestamp(match.created).strftime('%A %d %B %Y %H:%M:%S'))
-            print('  modified ', datetime.fromtimestamp(match.modified).strftime('%A %d %B %Y %H:%M:%S'))
-            if match.tag_list:
-                print('  tagged   ', match.tag_list)
-            if match.share_list:
-                print('  shared   ', match.share_list)
-            if 'pinned' in match.system_tags:
-                print('  pinned')
-            if 'published' in match.system_tags:
-                print('  published', match.published_url)
-            print('  version  ', match.version)
-            print()
+            self.show_note_metadata(match)
+
+    def show_note_metadata(self, note):
+        print(note.filename)
+        print('  created  ', datetime.fromtimestamp(note.created).strftime('%A %d %B %Y %H:%M:%S'))
+        print('  modified ', datetime.fromtimestamp(note.modified).strftime('%A %d %B %Y %H:%M:%S'))
+        if note.tag_list:
+            print('  tagged   ', note.tag_list)
+        if note.share_list:
+            print('  shared   ', note.share_list)
+        if 'pinned' in note.system_tags:
+            print('  pinned')
+        if 'published' in note.system_tags:
+            print('  published', note.published_url)
+        print('  version  ', note.version)
+        print()
 
     def show_note_history(self, matches, full=False):
         for match in self.find_matching_notes(matches):
@@ -554,6 +557,14 @@ class SimplenoteLocal:
                 else:
                     print('%06s...' % ('v%d' % version), end="\r")
             print('          ')
+
+    def show_note_version(self, show):
+        match = self.find_matching_notes([show[0],])[0]
+        version = int(show[1])
+        note = self.get_note_version(match.key, version)
+        self.show_note_metadata(note)
+        print()
+        print(note.body)
 
     def restore_note_version(self, restore):
         match = self.find_matching_notes([restore[0],])[0]
