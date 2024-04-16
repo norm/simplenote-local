@@ -235,3 +235,13 @@ To restore the content and tags of an older version of a single note:
 
 **Note:** In this instance, the name of the note needs to be quoted to make it
 the first argument to the command, as the second argument is the version.
+
+
+## Local changes
+
+To list known local changes to notes:
+
+    simplenote --list-changes
+
+**Note:** this does not automatically fetch the current state of notes, so
+it is not 100% authoritative.

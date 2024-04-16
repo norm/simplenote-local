@@ -591,6 +591,28 @@ Every tenth version should be, so try version %d or %d.
             new_note = self.send_one_change(note)
             self.fetch_changes()
 
+    def list_changes(self):
+        for note in self.list_changed_notes():
+            key = note.key
+            if key:
+                updated = False
+                if note.modified != self.notes[key].modified:
+                    updated = True
+                if note.fingerprint != self.notes[key].fingerprint:
+                    updated = True
+                if updated:
+                    print('>>', note.filename)
+                else:
+                    print('XX', note.filename, end='\n\n')
+                    continue
+            else:
+                print('++', note.filename)
+            print(
+                '   last updated:',
+                datetime.utcfromtimestamp(int(note.modified)),
+                end='\n\n',
+            )
+
     def get_note_version(self, key, version):
         cache_file = os.path.join(
             '/tmp',

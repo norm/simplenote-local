@@ -129,6 +129,11 @@ def main():
         nargs = 2,
         help = 'Restore an older version of a note.'
     )
+    notes.add_argument(
+        '--list-changes',
+        action = 'store_true',
+        help = 'List any local changes to notes compared to the last time a fetch was performed (does not automatically fetch, so can be out of date).'
+    )
 
     sync = parser.add_argument_group('Continual syncing')
     sync.add_argument(
@@ -204,6 +209,8 @@ def main():
             local.show_note_version(args.show_version)
         elif args.restore_version:
             local.restore_note_version(args.restore_version)
+        elif args.list_changes:
+            local.list_changes()
         else:
             # --edit is the default, overloaded to also supporting capturing
             # stdin to a named match or new file (taken from the first line)
