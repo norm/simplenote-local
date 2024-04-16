@@ -380,13 +380,12 @@ Otherwise, this tool is looking for files with both the words "key" and
         is_html = len(soup.find_all()) > 0
         if first_header:
             first_header = first_header.string
-        if is_html:
-            if not raw:
-                body = markdownify(body).lstrip().rstrip()
-                body = re.sub('\n\n\n*', '\n\n', body)
-            title, body = Note.title_and_body(body)
-            if first_header:
-                title = first_header
+        if is_html and not raw:
+            body = markdownify(body).lstrip().rstrip()
+            body = re.sub('\n\n\n*', '\n\n', body)
+        title, body = Note.title_and_body(body)
+        if first_header:
+            title = first_header
 
         if matches:
             matching = self.find_matching_notes(matches)
