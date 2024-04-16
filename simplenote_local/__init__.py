@@ -186,8 +186,9 @@ class SimplenoteLocal:
 
     def send_changes(self):
         for note in self.list_changed_notes():
-            self.send_one_change(note)
-        self.fetch_changes()
+            new_note = self.send_one_change(note)
+            self.notes[note.key] = new_note
+        self.save_data()
 
     def watch_for_changes(self, fetch_interval, send_wait):
         import threading
@@ -240,11 +241,12 @@ class SimplenoteLocal:
                             else:
                                 send = True
                             if send:
-                                self.send_one_change(note)
+                                new_note = self.send_one_change(note)
+                                self.notes[note.key] = new_note
                                 sent_change = True
                         changes.found = self.list_changed_notes()
                 if sent_change:
-                    self.fetch_changes()
+                    self.save_data()
 
         except KeyboardInterrupt:
             observer.stop()
@@ -295,10 +297,11 @@ class SimplenoteLocal:
                 os.utime(pathname, (now, now))
                 match.modified = now
 
-                self.send_one_change(match)
+                new_note = self.send_one_change(match)
+                self.notes[match.key] = new_note
                 sent_change = True
         if sent_change:
-            self.fetch_changes()
+            self.save_data()
 
     def remove_tag(self, tag, matches):
         matching = self.find_matching_notes(matches)
@@ -313,10 +316,11 @@ class SimplenoteLocal:
                 os.utime(pathname, (now, now))
                 match.modified = now
 
-                self.send_one_change(match)
+                new_note = self.send_one_change(match)
+                self.notes[match.key] = new_note
                 sent_change = True
         if sent_change:
-            self.fetch_changes()
+            self.save_data()
 
     def edit_matching_notes(self, matches):
         matching = self.find_matching_notes(matches)
@@ -342,10 +346,11 @@ class SimplenoteLocal:
             for note in self.list_changed_notes():
                 for match in matching:
                     if note.filename.lower() == match.filename.lower():
-                        self.send_one_change(note)
+                        new_note = self.send_one_change(note)
+                        self.notes[note.key] = new_note
                         changes = True
             if changes:
-                self.fetch_changes()
+                self.save_data()
         else:
             sys.exit("No matching notes found.")
 
@@ -399,18 +404,20 @@ class SimplenoteLocal:
             })
 
         new_note = self.send_one_change(note)
-        self.fetch_changes()
+        self.notes[note.key] = new_note
+        self.save_data()
 
     def trash_notes(self, matches):
         sent_change = False
         for match in self.find_matching_notes(matches):
             match.state = 'deleted'
             self.remove_note_file(match, 'quiet')
-            self.send_one_change(match)
+            new_note = self.send_one_change(match)
+            self.notes[match.key] = new_note
             sent_change = True
 
         if sent_change:
-            self.fetch_changes()
+            self.save_data()
 
     def restore_notes(self, matches):
         sent_change = False
@@ -429,11 +436,12 @@ class SimplenoteLocal:
                         with open(pathname, 'w') as handle:
                             handle.write(latest.body)
                         os.utime(pathname, (latest.modified, latest.modified))
-                        self.send_one_change(latest)
+                        new_note = self.send_one_change(latest)
+                        self.notes[latest.key] = new_note
                         sent_change = True
 
         if sent_change:
-            self.fetch_changes()
+            self.save_data()
 
     def purge_notes(self, matches):
         sent_change = False
@@ -453,27 +461,29 @@ class SimplenoteLocal:
         if sent_change:
             for key in deleted:
                 del self.notes[key]
-            self.fetch_changes()
+            self.save_data()
 
     def pin_notes(self, matches):
         sent_change = False
         for match in self.find_matching_notes(matches):
             match.system_tags.append('pinned')
-            self.send_one_change(match)
+            new_note = self.send_one_change(match)
+            self.notes[match.key] = new_note
             sent_change = True
 
         if sent_change:
-            self.fetch_changes()
+            self.save_data()
 
     def unpin_notes(self, matches):
         sent_change = False
         for match in self.find_matching_notes(matches):
             match.system_tags.remove('pinned')
-            self.send_one_change(match)
+            new_note = self.send_one_change(match)
+            self.notes[match.key] = new_note
             sent_change = True
 
         if sent_change:
-            self.fetch_changes()
+            self.save_data()
 
     def publish_notes(self, matches):
         sent_change = False
@@ -589,7 +599,8 @@ Every tenth version should be, so try version %d or %d.
             note.state = 'restored'
             note.version = None
             new_note = self.send_one_change(note)
-            self.fetch_changes()
+            self.notes[note.key] = new_note
+            self.save_data()
 
     def list_changes(self):
         for note in self.list_changed_notes():
