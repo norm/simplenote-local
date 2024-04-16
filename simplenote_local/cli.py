@@ -114,6 +114,16 @@ def main():
         action = 'store_true',
         help = 'Show all stored information on notes.'
     )
+    notes.add_argument(
+        '--history',
+        action = 'store_true',
+        help = 'List older versions of a note.'
+    )
+    notes.add_argument(
+        '--restore-version',
+        nargs = 2,
+        help = 'Restore an older version of a note.'
+    )
 
     sync = parser.add_argument_group('Continual syncing')
     sync.add_argument(
@@ -138,6 +148,11 @@ def main():
         '--raw',
         action = 'store_true',
         help = 'Do not Markdownify piped HTML input',
+    )
+    parser.add_argument(
+        '--full',
+        action = 'store_true',
+        help = 'Show all available older versions of notes.'
     )
     parser.add_argument(
         'matches',
@@ -178,6 +193,10 @@ def main():
             local.unpublish_notes(args.matches)
         elif args.info:
             local.show_note_state(args.matches)
+        elif args.history:
+            local.show_note_history(args.matches, args.full)
+        elif args.restore_version:
+            local.restore_note_version(args.restore_version)
         else:
             # --edit is the default, overloaded to also supporting capturing
             # stdin to a named match or new file (taken from the first line)

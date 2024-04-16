@@ -177,12 +177,12 @@ To tell Simplenote to remove published notes:
 
 ## Collaborating on notes
 
-To collaborate with others on a note, you can add a tag to a note which is the
+To collaborate with others on notes, you can add a tag which is the
 email address of another user:
 
     simplenote --add-tag norm@example.com key lime pie
 
-To stop sharing the note with them, remove the tag again:
+To stop sharing notes with them, remove the tag again:
 
     simplenote --remove-tag norm@example.com key lime pie
 
@@ -198,6 +198,36 @@ To stop sharing the note with them, remove the tag again:
    unexpected behaviour and not what you want.
 
 
-## Show a summary of the metadata stored on a note
+## Show a summary of the metadata stored about matching notes
 
     simplenote --info key lime pie
+
+
+## Historical versions of notes
+
+Simplenote keeps multiple versions of notes as they are updated, but not all.
+The [Simperium documentation](https://simperium.com/overview/) states:
+
+> Simperium stores up to 50 of your most recent versions, and then every
+> 10th version beyond that.
+
+Simperium is the name for the service backing the Simplenote app.
+
+**Personal note:** I have some regularly edited notes with 1,500+ versions
+where versions more than 1,000 back are not available; so there are more
+possible expiry thresholds for historical versions than stated.
+
+To get a list of the recent historical versions of matching notes:
+
+    simplenote --history key lime pie
+
+To get a list of all available historical versions of matching notes:
+
+    simplenote --history --full key lime pie
+
+To restore an older version of a single note:
+
+    simplenote --restore-note "key lime pie" 22
+
+**Note:** In this instance, the name of the note needs to be quoted to make it
+the first argument to the command, as the second argument is the version.

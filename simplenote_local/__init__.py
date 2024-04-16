@@ -533,6 +533,73 @@ class SimplenoteLocal:
             print('  version  ', match.version)
             print()
 
+    def show_note_history(self, matches, full=False):
+        for match in self.find_matching_notes(matches):
+            print(match.filename)
+            current = match.version
+            limit = 10
+            if full:
+                limit = current
+            for i in range(0, limit):
+                version = current - i
+                if version < 1:
+                    break
+                note_version = self.get_note_version(match.key, version)
+                if note_version:
+                    print(
+                        '%06s' % ('v%d' % note_version.version),
+                        '  %-14s' % ('%d chars' % len(note_version.content)),
+                        datetime.utcfromtimestamp(int(note_version.modified)),
+                    )
+                else:
+                    print('%06s...' % ('v%d' % version), end="\r")
+            print('          ')
+
+    def restore_note_version(self, restore):
+        match = self.find_matching_notes([restore[0],])[0]
+        version = int(restore[1])
+        note = self.get_note_version(match.key, version)
+        if not note:
+            print("""
+** Stored note "%s" version %d not found.
+
+Simplenote does not keep every version of every note forever. Notes that
+have received many edits will not have all historic versions available.
+Every tenth version should be, so try version %d or %d.
+""" % (
+                    match.filename,
+                    version,
+                    ((version // 10) * 10 + 1),
+                    ((version // 10) * 10 + 11),
+                ),
+                file=sys.stderr
+            )
+        else:
+            note.state = 'restored'
+            note.version = None
+            new_note = self.send_one_change(note)
+            self.fetch_changes()
+
+    def get_note_version(self, key, version):
+        cache_file = os.path.join(
+            '/tmp',
+            'simplenote_local.%s.%d.pickle' % (key, version)
+        )
+        if os.path.exists(cache_file):
+            with open(cache_file, 'rb') as handle:
+                note = pickle.load(handle)
+        else:
+            note, error = self.simplenote_api.get_note(key, version)
+            if error:
+                if str(note) != "HTTP Error 404: Not Found":
+                    sys.exit(str(note))
+                note = None
+        with open(cache_file, 'wb') as handle:
+            pickle.dump(note, handle)
+        if note:
+            return Note(note)
+        return None
+
     def find_matching_notes(self, matches):
         notes = set(self.get_local_note_state())
         for match in matches:
@@ -614,6 +681,7 @@ class SimplenoteLocal:
 
         if note.key:
             update['key'] = note.key
+        if note.version:
             update['version'] = note.version
 
         new_note, error = self.simplenote_api.update_note(update)
