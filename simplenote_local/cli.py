@@ -36,7 +36,9 @@ def main():
         )),
     )
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument(
         '--fetch',
         action = 'store_true',
@@ -170,6 +172,16 @@ def main():
         help = 'Words or word fragments that must appear in a note when listing or editing notes.',
     )
 
+    parser.epilog = """If no options are provided, --edit is the default action.
+
+To edit an individual file, it must have a space in the filename and that
+space must be quoted in your command.
+
+When piping input into %(prog)s without other arguments, the filename of
+the note to create is taken either from the first non-blank line of input,
+or the first <h1> tag if the input is detected as HTML.
+"""
+
     args = parser.parse_args()
 
     try:
@@ -223,6 +235,7 @@ def main():
         # don't need to see an error when output is truncated, eg `...|head`
         devnull = os.open(os.devnull, os.O_WRONLY)
         os.dup2(devnull, sys.stdout.fileno())
+
 
 if __name__ == '__main__':
     main()
