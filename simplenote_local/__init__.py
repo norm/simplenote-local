@@ -13,8 +13,6 @@ import sys
 import time
 import toml
 
-from pprint import pprint
-
 
 class Note:
     def __init__(self, note={}):
@@ -150,6 +148,12 @@ class SimplenoteLocal:
             if update.key in self.notes:
                 current = self.notes[update.key]
 
+
+            if current and current.version >= update.version:
+                # because of the stored cursor position, running fetch after
+                # sending a local update will include the already known version
+                continue
+
             if current and not current.deleted and current.title == update.title:
                 # continue using the established filename
                 update.filename = current.filename
@@ -244,9 +248,9 @@ class SimplenoteLocal:
                                 new_note = self.send_one_change(note)
                                 self.notes[note.key] = new_note
                                 sent_change = True
-                        changes.found = self.list_changed_notes()
                 if sent_change:
                     self.save_data()
+                changes.found = self.list_changed_notes()
 
         except KeyboardInterrupt:
             observer.stop()
@@ -817,11 +821,11 @@ Every tenth version should be, so try version %d or %d.
         if note.body != current:
             with open(pathname, 'w') as handle:
                 handle.write(note.body)
-            os.utime(pathname, (note.modified, note.modified))
             if not current:
                 print('++', note.filename)
             else:
                 print('<<', note.filename)
+        os.utime(pathname, (note.modified, note.modified))
 
     def remove_note_file(self, note, quiet=False):
         pathname = os.path.join(self.directory, note.filename)
