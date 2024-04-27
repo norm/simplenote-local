@@ -144,6 +144,7 @@ class SimplenoteLocal:
             self.stop_words = set(nltk.corpus.stopwords.words('english'))
 
     def fetch_changes(self):
+        received_change = False
         updates = self.get_note_updates()
         for entry in updates:
             update = Note(entry)
@@ -189,7 +190,9 @@ class SimplenoteLocal:
                 self.save_note_file(update)
 
             self.notes[update.key] = update
-        self.save_data()
+            received_change = True
+        if received_change:
+            self.save_data()
 
     def send_changes(self):
         for note in self.list_changed_notes():
