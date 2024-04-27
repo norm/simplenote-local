@@ -26,6 +26,7 @@ setup(
         'beautifulsoup4',
         'markdownify',
         'nltk',
+        'simple-colors',
         'simplenote',
         'toml',
         'watchdog',

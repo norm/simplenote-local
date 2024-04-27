@@ -7,6 +7,7 @@ import nltk
 import os
 import pickle
 import re
+from simple_colors import *
 from simplenote import Simplenote
 import subprocess
 import sys
@@ -177,7 +178,7 @@ class SimplenoteLocal:
                     os.path.join(self.directory, current.filename),
                     os.path.join(self.directory, update.filename),
                 )
-                print('  ', current.filename, '->', update.filename)
+                print('  ', current.filename, green('->'), update.filename)
 
             if update.deleted:
                 if current and not current.deleted:
@@ -264,13 +265,13 @@ class SimplenoteLocal:
             tags = ''
             url = ''
             if 'pinned' in note.system_tags:
-                pinned = ' pinned' 
-            if 'shared' in note.system_tags:
-                shared = ' shared'
+                pinned = blue(' pinned', 'bold')
+            if note.share_list:
+                shared = red(' shared ' + note.share_list)
             if note.tags:
-                tags = ' ' + note.tag_list
+                tags = ' ' + blue(note.tag_list)
             if 'published' in note.system_tags:
-                url = ' %s' % note.published_url
+                url = yellow(' %s' % note.published_url)
             print(f'"{filename}"{pinned}{shared}{tags}{url}')
 
     def list_tags(self):
@@ -465,7 +466,7 @@ Otherwise, this tool is looking for files with both the words "key" and
                         if error:
                             sys.exit(error)
                         sent_change = True
-                        print('XX', note.title)
+                        print(magenta('XX'), note.title)
                         deleted.append(note.key)
 
         if sent_change:
@@ -619,12 +620,12 @@ Every tenth version should be, so try version %d or %d.
                 if note.fingerprint != self.notes[key].fingerprint:
                     updated = True
                 if updated:
-                    print('>>', note.filename)
+                    print(blue('>>'), note.filename)
                 else:
-                    print('XX', note.filename, end='\n\n')
+                    print(magenta('XX'), note.filename, end='\n\n')
                     continue
             else:
-                print('++', note.filename)
+                print(green('++'), note.filename)
             print(
                 '   last updated:',
                 datetime.utcfromtimestamp(int(note.modified)),
@@ -689,19 +690,19 @@ Every tenth version should be, so try version %d or %d.
         if note.state == 'deleted':
             new_note = self.trash_note(note)
             new_note = Note(new_note)
-            print('XX', note.filename)
+            print(magenta('XX'), note.filename)
         elif note.state == 'new':
             new_note = self.send_note_update(note)
             pathname = os.path.join(self.directory, new_note.filename)
             with open(pathname, 'w') as handle:
                 handle.write(new_note.body)
             os.utime(pathname, (new_note.modified, new_note.modified))
-            print('++ note "%s" (%s)' % (note.filename, new_note.key))
+            print(green('++'), 'note "%s" (%s)' % (note.filename, new_note.key))
         else:
             note.content = note.filename[:-4] + "\n\n" + note.body
             new_note = self.send_note_update(note)
             self.save_note_file(new_note)
-            print('>>', new_note.filename)
+            print(blue('>>'), new_note.filename)
         self.notes[new_note.key] = new_note
         return new_note
 
@@ -813,9 +814,9 @@ Every tenth version should be, so try version %d or %d.
             with open(pathname, 'w') as handle:
                 handle.write(note.body)
             if not current:
-                print('++', note.filename)
+                print(green('++'), note.filename)
             else:
-                print('<<', note.filename)
+                print(blue('<<'), note.filename)
         os.utime(pathname, (note.modified, note.modified))
 
     def remove_note_file(self, note, quiet=False):
@@ -823,7 +824,7 @@ Every tenth version should be, so try version %d or %d.
         try:
             os.remove(pathname)
             if not quiet:
-                print('--', note.filename)
+                print(magenta('--'), note.filename)
         except FileNotFoundError:
             # after deleting a file locally the next fetch will
             # include the state that the file has been removed,
