@@ -35,6 +35,8 @@ class Note:
             self.fingerprint = hashlib.sha256(self.body.encode('utf-8')).hexdigest()
             self.content = content
         else:
+            if not self.title:
+                self.title = 'new note'
             self.content = self.title + "\n\n" + self.body
         self.filename = note.get('filename', '%s.txt' % self.title)
 
@@ -190,8 +192,7 @@ class SimplenoteLocal:
 
     def send_changes(self):
         for note in self.list_changed_notes():
-            new_note = self.send_one_change(note)
-            self.notes[note.key] = new_note
+            self.send_one_change(note)
         self.save_data()
 
     def watch_for_changes(self, fetch_interval, send_wait):
@@ -245,8 +246,7 @@ class SimplenoteLocal:
                             else:
                                 send = True
                             if send:
-                                new_note = self.send_one_change(note)
-                                self.notes[note.key] = new_note
+                                self.send_one_change(note)
                                 sent_change = True
                 if sent_change:
                     self.save_data()
@@ -301,8 +301,7 @@ class SimplenoteLocal:
                 os.utime(pathname, (now, now))
                 match.modified = now
 
-                new_note = self.send_one_change(match)
-                self.notes[match.key] = new_note
+                self.send_one_change(match)
                 sent_change = True
         if sent_change:
             self.save_data()
@@ -320,8 +319,7 @@ class SimplenoteLocal:
                 os.utime(pathname, (now, now))
                 match.modified = now
 
-                new_note = self.send_one_change(match)
-                self.notes[match.key] = new_note
+                self.send_one_change(match)
                 sent_change = True
         if sent_change:
             self.save_data()
@@ -350,8 +348,7 @@ class SimplenoteLocal:
             for note in self.list_changed_notes():
                 for match in matching:
                     if note.filename.lower() == match.filename.lower():
-                        new_note = self.send_one_change(note)
-                        self.notes[note.key] = new_note
+                        self.send_one_change(note)
                         changes = True
             if changes:
                 self.save_data()
@@ -419,8 +416,7 @@ Otherwise, this tool is looking for files with both the words "key" and
                 'systemTags': system_tags,
             })
 
-        new_note = self.send_one_change(note)
-        self.notes[note.key] = new_note
+        self.send_one_change(note)
         self.save_data()
 
     def trash_notes(self, matches):
@@ -428,8 +424,7 @@ Otherwise, this tool is looking for files with both the words "key" and
         for match in self.find_matching_notes(matches):
             match.state = 'deleted'
             self.remove_note_file(match, 'quiet')
-            new_note = self.send_one_change(match)
-            self.notes[match.key] = new_note
+            self.send_one_change(match)
             sent_change = True
 
         if sent_change:
@@ -452,8 +447,7 @@ Otherwise, this tool is looking for files with both the words "key" and
                         with open(pathname, 'w') as handle:
                             handle.write(latest.body)
                         os.utime(pathname, (latest.modified, latest.modified))
-                        new_note = self.send_one_change(latest)
-                        self.notes[latest.key] = new_note
+                        self.send_one_change(latest)
                         sent_change = True
 
         if sent_change:
@@ -483,8 +477,7 @@ Otherwise, this tool is looking for files with both the words "key" and
         sent_change = False
         for match in self.find_matching_notes(matches):
             match.system_tags.append('pinned')
-            new_note = self.send_one_change(match)
-            self.notes[match.key] = new_note
+            self.send_one_change(match)
             sent_change = True
 
         if sent_change:
@@ -494,8 +487,7 @@ Otherwise, this tool is looking for files with both the words "key" and
         sent_change = False
         for match in self.find_matching_notes(matches):
             match.system_tags.remove('pinned')
-            new_note = self.send_one_change(match)
-            self.notes[match.key] = new_note
+            self.send_one_change(match)
             sent_change = True
 
         if sent_change:
@@ -614,8 +606,7 @@ Every tenth version should be, so try version %d or %d.
         else:
             note.state = 'restored'
             note.version = None
-            new_note = self.send_one_change(note)
-            self.notes[note.key] = new_note
+            self.send_one_change(note)
             self.save_data()
 
     def list_changes(self):
