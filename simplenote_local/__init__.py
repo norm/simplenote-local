@@ -134,7 +134,7 @@ class SimplenoteLocal:
         self.user = user
         self.password = password
         self.simplenote_api = Simplenote(self.user, self.password)
-        self.notes, self.cursor, self.words = self.load_data()
+        self.reload_data()
         os.makedirs(self.directory, exist_ok=True)
 
         try:
@@ -142,6 +142,9 @@ class SimplenoteLocal:
         except:
             nltk.download('stopwords')
             self.stop_words = set(nltk.corpus.stopwords.words('english'))
+
+    def reload_data(self):
+        self.notes, self.cursor, self.words = self.load_data()
 
     def fetch_changes(self):
         received_change = False
@@ -207,15 +210,14 @@ class SimplenoteLocal:
         class Changes(FileSystemEventHandler):
             def __init__(self, local):
                 super().__init__()
-                self.local = local
                 self.lock = threading.Lock()
-                self.found = self.local.list_changed_notes()
+                self.events = False
 
             def on_any_event(self, event):
                 filename = os.path.basename(event.src_path)
                 if filename.endswith('.txt') and not filename.startswith('.'):
                     with self.lock:
-                        self.found = self.local.list_changed_notes()
+                        self.events = True
 
         changes = Changes(self)
         observer = Observer()
@@ -236,8 +238,12 @@ class SimplenoteLocal:
 
                 sent_change = False
                 with changes.lock:
-                    if changes.found:
-                        for note in changes.found:
+                    if changes.events:
+                        # a slight pause to account for another
+                        # command performing file changing actions
+                        time.sleep(1)
+                        self.reload_data()
+                        for note in self.list_changed_notes():
                             send = False
                             filename = note.filename
                             pathname = os.path.join(self.directory, filename)
@@ -252,9 +258,10 @@ class SimplenoteLocal:
                             if send:
                                 self.send_one_change(note)
                                 sent_change = True
-                if sent_change:
-                    self.save_data()
-                changes.found = self.list_changed_notes()
+                        if sent_change:
+                            self.save_data()
+                        if not self.list_changed_notes():
+                            changes.events = False
 
         except KeyboardInterrupt:
             observer.stop()
