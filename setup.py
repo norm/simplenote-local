@@ -25,7 +25,6 @@ setup(
     install_requires = [
         'beautifulsoup4',
         'markdownify',
-        'nltk',
         'simple-colors',
         'simplenote',
         'toml',

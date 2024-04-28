@@ -137,12 +137,6 @@ class SimplenoteLocal:
         self.reload_data()
         os.makedirs(self.directory, exist_ok=True)
 
-        try:
-            self.stop_words = set(nltk.corpus.stopwords.words('english'))
-        except:
-            nltk.download('stopwords')
-            self.stop_words = set(nltk.corpus.stopwords.words('english'))
-
     def reload_data(self):
         self.notes, self.cursor, self.words = self.load_data()
 
@@ -686,9 +680,8 @@ Every tenth version should be, so try version %d or %d.
                 for word in self.words:
                     if match in word:
                         for note in notes:
-                            for filename in self.words[word]:
-                                if note.filename == filename:
-                                    matching.add(note)
+                            if note.filename in self.words[word]:
+                                matching.add(note)
             notes = notes.intersection(matching)
 
         return sorted(
@@ -795,11 +788,12 @@ Every tenth version should be, so try version %d or %d.
             if filename in expected_files:
                 note = deepcopy(self.notes[expected_files[filename]])
                 note.body = body
+                note.content = note.title + "\n\n" + note.body
                 note.state = 'unchanged'
                 if current != note.modified or sha != note.fingerprint:
                     note.modified = current
                     note.state = 'changed'
-                    self.add_to_words_cache(filename, body)
+                    self.add_to_words_cache(filename, note.content)
                 del expected_files[filename]
                 local_notes.append(note)
             else:
@@ -811,7 +805,7 @@ Every tenth version should be, so try version %d or %d.
                     'filename': filename,
                     'state': 'new',
                 })
-                self.add_to_words_cache(filename, body)
+                self.add_to_words_cache(filename, note.content)
                 local_notes.append(note)
 
         # deal with any known notes now removed
@@ -865,10 +859,10 @@ Every tenth version should be, so try version %d or %d.
     def add_to_words_cache(self, filename, content):
         self.remove_file_from_words_cache(filename)
         words = set(
-            word for word in [
-                re.sub(r'[\W_]+', '', word.lower())
-                    for word in re.split(r'\b', filename[:-4] + content)
-                ] if word and len(word) < 30 and word not in self.stop_words
+            word[:60] for word in [
+                re.sub(r'[\W_]+', ' ', word.lower())
+                    for word in re.split(r'\b', content)
+                ] if word and len(word) > 2
         )
         for word in words:
             if word not in self.words:
