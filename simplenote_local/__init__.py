@@ -427,7 +427,15 @@ Otherwise, this tool is looking for files with both the words "key" and
                 'systemTags': system_tags,
             })
 
-        self.send_one_change(note)
+        unique_filename = False
+        while not unique_filename:
+            by_filename = self.get_note_by_filename(note.filename)
+            if not by_filename:
+                unique_filename = True
+            else:
+                note.increment_filename()
+
+        new_note = self.send_one_change(note)
         self.save_data()
 
     def trash_notes(self, matches):
