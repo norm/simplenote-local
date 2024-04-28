@@ -899,16 +899,22 @@ Every tenth version should be, so try version %d or %d.
         return notes, data['cursor'], data['words']
 
     def save_data(self):
-        with open(os.path.join(self.directory, 'notes.data'), 'wb') as handle:
+        tmp_file = os.path.join(self.directory, '.notes.save')
+        with open(tmp_file, 'wb') as handle:
             pickle.dump({
                 'notes': self.notes_as_dict(),
                 'cursor': self.cursor,
                 'words': self.words,
             }, handle)
-        with open(os.path.join(self.directory, 'notes.toml'), 'w') as handle:
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.rename(tmp_file, os.path.join(self.directory, 'notes.data'))
+        with open(tmp_file, 'w') as handle:
             toml.dump({
                 'notes': self.notes_as_dict(),
                 'cursor': self.cursor,
                 'words': self.words,
             }, handle)
-
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.rename(tmp_file, os.path.join(self.directory, 'notes.toml'))
