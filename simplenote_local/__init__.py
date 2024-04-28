@@ -711,16 +711,19 @@ Every tenth version should be, so try version %d or %d.
             print(magenta('XX'), note.filename)
         elif note.state == 'new':
             new_note = self.send_note_update(note)
-            pathname = os.path.join(self.directory, new_note.filename)
+            pathname = os.path.join(self.directory, note.filename)
             with open(pathname, 'w') as handle:
                 handle.write(new_note.body)
             os.utime(pathname, (new_note.modified, new_note.modified))
             print(green('++'), 'note "%s" (%s)' % (note.filename, new_note.key))
         else:
-            note.content = note.filename[:-4] + "\n\n" + note.body
+            note.content = note.title + "\n\n" + note.body
             new_note = self.send_note_update(note)
             self.save_note_file(new_note)
             print(blue('>>'), new_note.filename)
+
+        if note.title == new_note.title:
+            new_note.filename = note.filename
         self.notes[new_note.key] = new_note
         return new_note
 
