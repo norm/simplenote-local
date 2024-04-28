@@ -478,7 +478,7 @@ Otherwise, this tool is looking for files with both the words "key" and
                         if error:
                             sys.exit(error)
                         sent_change = True
-                        print(magenta('XX'), note.title)
+                        print(red('XX'), note.title)
                         deleted.append(note.key)
 
         if sent_change:
@@ -634,7 +634,7 @@ Every tenth version should be, so try version %d or %d.
                 if updated:
                     print(blue('>>'), note.filename)
                 else:
-                    print(magenta('XX'), note.filename, end='\n\n')
+                    print(magenta('--'), note.filename, end='\n\n')
                     continue
             else:
                 print(green('++'), note.filename)
@@ -701,7 +701,7 @@ Every tenth version should be, so try version %d or %d.
         if note.state == 'deleted':
             new_note = self.trash_note(note)
             new_note = Note(new_note)
-            print(magenta('XX'), note.filename)
+            print(magenta('--'), note.filename)
         elif note.state == 'new':
             new_note = self.send_note_update(note)
             pathname = os.path.join(self.directory, note.filename)
