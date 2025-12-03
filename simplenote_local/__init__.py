@@ -6,6 +6,7 @@ from markdownify import markdownify
 import nltk
 import os
 import pickle
+import random
 import re
 from simple_colors import *
 from simplenote import Simplenote
@@ -721,11 +722,18 @@ Every tenth version should be, so try version %d or %d.
         return new_note
 
     def get_note_updates(self):
-        notes, error = self.simplenote_api.get_note_list(since=self.cursor)
-        if error:
-            sys.exit(error)
-        self.cursor = self.simplenote_api.current
-        return sorted(notes, key=lambda note: int(note['creationDate']))
+        retries = 5
+        while retries:
+            notes, error = self.simplenote_api.get_note_list(since=self.cursor)
+            if not error:
+                self.cursor = self.simplenote_api.current
+                return sorted(notes, key=lambda note: int(note['creationDate']))
+            retries -= 1
+            if retries:
+                # exponential backoff 1-2s, 2-4s, 4-8s, 8-16s (15-30s total)
+                power = 5 - retries
+                time.sleep(random.randint(2 ** (power - 1), 2 ** power))
+        raise Exception(f"Repeated simplenote API error {error}")
 
     def get_note_by_filename(self, filename):
         for key in self.notes:
